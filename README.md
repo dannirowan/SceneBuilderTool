@@ -9,6 +9,8 @@ Turn cubes into multi-floor buildings with a Unity editor script. Generate proce
 - **Ground Plane**: Optional ground plane beneath the building
 - **Hierarchy Organization**: Clean, named hierarchy with floor-based organization
 - **Undo Support**: Full undo integration for all generation operations
+- **Player Controller**: First-person player with movement, jumping, jetpack, crouch, and noclip modes
+- **Auto-Tagging**: All floors/ceilings tagged as "Ground" for player ground detection
 
 ## Installation
 
@@ -74,3 +76,33 @@ Shafts are automatically generated when **Auto Vertical Circulation** is enabled
 
 - **RoomBuilderEditor**: Main building generation and door/window placement tool
 - **RoomBuilder**: Legacy runtime class (no active menu item)
+- **PlayerController**: First-person player character controller with movement and flight
+- **PlayerCamera**: First-person camera with mouse look
+- **AddPlayer**: Editor script for quickly adding a player to the scene
+
+## Player Controller
+
+The Room Builder includes a fully functional first-person player controller. Use it to explore your generated building.
+
+### Adding a Player
+
+1. Go to **Tools > Add Player to Scene** to automatically create a player in your scene
+2. Press **Play** to start the game
+3. The player spawns with a first-person camera and physics-based movement
+
+### Player Controls
+
+- **WASD**: Move forward/backward/strafe left/right (relative to where camera is looking)
+- **Mouse**: Look around (move mouse to rotate view)
+- **Space**: Jump (when on ground) / Hold Space: Activate jetpack (fly upward while airborne)
+- **Left Ctrl**: Crouch (reduces player height and slows movement)
+- **P**: Toggle noclip mode (fly through walls freely, no gravity)
+- **Escape**: Unlock and show mouse cursor
+
+### Player Features
+
+- **Ground Detection**: Uses raycast to reliably detect when player is on ground floors/ceilings
+- **Jumping**: Jump when grounded, with clamped fall speed to prevent excessive velocity
+- **Jetpack Flight**: Hold spacebar while airborne to fly upward, allows exploration of higher areas
+- **Crouch**: Reduce profile and movement speed for navigating tight spaces
+- **Noclip Mode**: Free flight through all geometry, useful for exploring the entire building structure
