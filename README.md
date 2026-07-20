@@ -80,6 +80,26 @@ Shafts are automatically generated when **Auto Vertical Circulation** is enabled
 - **PlayerCamera**: First-person camera with mouse look
 - **AddPlayer**: Editor script for quickly adding a player to the scene
 
+## Assets Folder Structure
+
+The project includes the following folders and files:
+
+- **Assets/Editor/**: Contains editor-only scripts
+  - `RoomBuilderTool.cs` - Main room builder editor window
+  - `AddPlayer.cs` - Quick menu item to add a player to the scene
+  
+- **Assets/Scripts/**: Contains runtime scripts (used during gameplay)
+  - `PlayerController.cs` - Player movement, jumping, flight, crouch, noclip logic
+  - `PlayerCamera.cs` - First-person camera with mouse look controls
+
+- **Assets/Prefabs/**: Contains reusable prefabs
+  - `Cube.prefab` - Basic cube template used as starting point for room generation
+
+- **Assets/Scenes/**: Contains Unity scenes
+  - `SampleScene.unity` - The main sample scene for testing room generation and player exploration
+
+- **Assets/RoomBuilder.cs**: Legacy runtime class (kept for reference, no active use)
+
 ## Player Controller
 
 The Room Builder includes a fully functional first-person player controller. Use it to explore your generated building.
