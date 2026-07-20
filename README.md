@@ -14,9 +14,27 @@ Turn cubes into multi-floor buildings with a Unity editor script. Generate proce
 
 ## Installation
 
-1. In your Unity Project window, right-click the `Assets` folder and select **Create > Folder**.
-2. Name this new folder exactly **`Editor`**.
-3. Copy `RoomBuilderTool.cs` into the `Editor` folder.
+### Option 1: Use as Project Template
+Clone this repository to start a new game with the room builder and player controller pre-configured:
+
+```bash
+git clone https://github.com/dannirowan/SceneBuilderTool.git MyGameName
+cd MyGameName
+git remote set-url origin https://github.com/yourusername/MyGameName.git
+```
+
+Then push to your own repository and start developing.
+
+### Option 2: Import into Existing Project
+If you have an existing Unity project and just want to add the room builder:
+
+1. Download `RoomBuilderTool.unitypackage` from the [Releases](Releases/) folder
+2. Open your Unity project
+3. Go to **Assets > Import Package > Custom Package...**
+4. Select the downloaded `.unitypackage` file
+5. Click **Import** (ensure Editor and Scripts folders are checked)
+
+The room builder tool and player controller will be imported into your `Assets/Editor` and `Assets/Scripts` folders.
 
 ## Usage
 
