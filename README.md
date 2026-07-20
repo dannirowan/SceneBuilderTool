@@ -14,7 +14,7 @@ Turn cubes into multi-floor buildings with a Unity editor script. Generate proce
 
 1. In your Unity Project window, right-click the `Assets` folder and select **Create > Folder**.
 2. Name this new folder exactly **`Editor`**.
-3. Copy `RoomBuilderTool.cs` and `MenuFlusher.cs` into the `Editor` folder.
+3. Copy `RoomBuilderTool.cs` into the `Editor` folder.
 
 ## Usage
 
@@ -69,11 +69,8 @@ Shafts are automatically generated when **Auto Vertical Circulation** is enabled
 ## Menu Items
 
 - **Tools/Room Builder**: Main editor window for building generation
-- **Tools/Menu Flusher/Scan and List All Menu Items**: Debug utility to discover all menu items in project
-- **Tools/Menu Flusher/List Tools Menu Items**: List only Tools menu items
 
 ## Script Files
 
 - **RoomBuilderEditor**: Main building generation and door/window placement tool
-- **MenuFlusher**: Utility for discovering and managing menu items via reflection
 - **RoomBuilder**: Legacy runtime class (no active menu item)
