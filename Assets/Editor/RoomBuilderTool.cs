@@ -190,7 +190,6 @@ public class RoomBuilderEditor : EditorWindow
 
     private void OnSceneGUI(SceneView sceneView)
     {
-        // Visualise Circulation Shafts preview on current selected cube prior to conversion
         if (Selection.activeGameObject != null && targetWall == null && autoGenerateCirculation)
         {
             DrawCirculationVisualisation(Selection.activeGameObject);
@@ -314,14 +313,12 @@ public class RoomBuilderEditor : EditorWindow
             size = col.bounds.size;
         }
 
-        // Draw Stairwell visualizer
         Vector3 stairCenter = center + stairwellPosition;
         Vector3 stairSize = new Vector3(stairwellDimensions.x, size.y, stairwellDimensions.y);
         Handles.color = new Color(0f, 1f, 0.3f, 0.3f);
         Handles.DrawWireCube(stairCenter, stairSize);
         Handles.Label(stairCenter, "Stairwell Shaft", EditorStyles.boldLabel);
 
-        // Draw Lift visualizer
         Vector3 liftCenter = center + liftShaftPosition;
         Vector3 liftSize = new Vector3(liftShaftDimensions.x, size.y, liftShaftDimensions.y);
         Handles.color = new Color(1f, 0.5f, 0f, 0.3f);
@@ -393,7 +390,6 @@ public class RoomBuilderEditor : EditorWindow
         buildingRoot.transform.position = center;
         Undo.RegisterCreatedObjectUndo(buildingRoot, "Generate Procedural Room Structure");
 
-        // Place ground plane beneath the base floor using the original selection bottom
         if (addGround)
         {
             float bottomY = center.y - (size.y / 2f);
@@ -406,10 +402,11 @@ public class RoomBuilderEditor : EditorWindow
             {
                 gRend.sharedMaterial = groundMaterial;
             }
+            EnsureTagExists("Ground");
+            ground.tag = "Ground";
             Undo.RegisterCreatedObjectUndo(ground, "Create Ground Plane");
         }
 
-        // Calculate stacked floor offsets
         int startFloorIndex = 0;
         int endFloorIndex = 0;
 
@@ -433,16 +430,16 @@ public class RoomBuilderEditor : EditorWindow
             GenerateSingleRoom(roomRoot.transform, roomSize, floorLabel, baseRoomCenter, startFloorIndex, endFloorIndex, f);
         }
 
-        // Generate total-height circulation shafts
         if (autoGenerateCirculation)
         {
             float totalHeight = (endFloorIndex - startFloorIndex + 1) * roomHeight;
             GenerateCirculationShafts(buildingRoot.transform, totalHeight, baseRoomCenter);
+
+            GenerateWorkingLift(buildingRoot.transform, liftShaftPosition, liftShaftDimensions, startFloorIndex, endFloorIndex, roomHeight, baseRoomCenter);
         }
 
         Undo.DestroyObjectImmediate(selected);
 
-        // Collapse all other building roots so only the new one is visible in the hierarchy
         var hierarchyType = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.SceneHierarchyWindow");
         var hierarchyWindow = EditorWindow.GetWindow(hierarchyType);
         var setExpanded = hierarchyType?.GetMethod("SetExpandedRecursive",
@@ -466,10 +463,8 @@ public class RoomBuilderEditor : EditorWindow
         float hz = size.z / 2f;
         float t = wallThickness;
 
-        // Create floor with punch-throughs for shafts
         CreateFloorWithShaftOpenings(roomRoot, $"{floorLabel}_Floor", new Vector3(0, -hy + (t / 2f), 0), new Vector3(size.x, t, size.z), floorMaterial, hx, hz);
         
-        // Create ceiling - punch through if not the top floor of building
         bool isTopFloor = (currentFloor == endFloor);
         if (isTopFloor)
         {
@@ -480,7 +475,6 @@ public class RoomBuilderEditor : EditorWindow
             CreateFloorWithShaftOpenings(roomRoot, $"{floorLabel}_Ceiling", new Vector3(0, hy - (t / 2f), 0), new Vector3(size.x, t, size.z), floorMaterial, hx, hz);
         }
         
-        // Create north/south walls with punch-throughs for circulation shafts
         CreateWallWithShaftOpenings($"{floorLabel}_Wall_North", roomRoot, 
             new Vector3(0, 0, hz - (t / 2f)), new Vector3(size.x, size.y - (t * 2f), t), wallMaterial,
             buildingCenter, currentFloor, startFloor, endFloor, size.y, true);
@@ -489,7 +483,6 @@ public class RoomBuilderEditor : EditorWindow
             new Vector3(0, 0, -hz + (t / 2f)), new Vector3(size.x, size.y - (t * 2f), t), wallMaterial,
             buildingCenter, currentFloor, startFloor, endFloor, size.y, true);
         
-        // Create east/west walls with punch-throughs
         CreateWallWithShaftOpenings($"{floorLabel}_Wall_East", roomRoot, 
             new Vector3(hx - (t / 2f), 0, 0), new Vector3(t, size.y - (t * 2f), size.z - (t * 2f)), wallMaterial,
             buildingCenter, currentFloor, startFloor, endFloor, size.y, false);
@@ -507,7 +500,6 @@ public class RoomBuilderEditor : EditorWindow
             return;
         }
 
-        // Check if stairwell or lift shafts intersect this floor in XZ plane
         Vector3 stairwellXZ = new Vector3(stairwellPosition.x, 0, stairwellPosition.z);
         Vector3 liftShaftXZ = new Vector3(liftShaftPosition.x, 0, liftShaftPosition.z);
         
@@ -521,12 +513,10 @@ public class RoomBuilderEditor : EditorWindow
 
         if (!stairIntersects && !liftIntersects)
         {
-            // No shafts intersect - create full floor
             CreateWall(name, parent, localPos, floorScale, mat);
         }
         else
         {
-            // Create floor pieces around shaft openings
             CreateFloorSegmentsAroundShafts(parent, name, localPos, floorScale, mat, 
                 stairwellXZ, stairHalfW, stairHalfD, stairIntersects,
                 liftShaftXZ, liftHalfW, liftHalfD, liftIntersects,
@@ -536,7 +526,6 @@ public class RoomBuilderEditor : EditorWindow
 
     private bool IsShaftIntersectingFloor(Vector3 shaftCenter, float shaftHalfW, float shaftHalfD, float roomHalfX, float roomHalfZ)
     {
-        // Check AABB intersection between shaft footprint and floor footprint
         float shaftMinX = shaftCenter.x - shaftHalfW;
         float shaftMaxX = shaftCenter.x + shaftHalfW;
         float shaftMinZ = shaftCenter.z - shaftHalfD;
@@ -555,12 +544,9 @@ public class RoomBuilderEditor : EditorWindow
         Vector3 liftPos, float liftHW, float liftHD, bool liftIntersects,
         float roomHalfX, float roomHalfZ)
     {
-        float t = wallThickness;
         float floorThickness = baseScale.y;
         float roomWidth = roomHalfX * 2f;
-        float roomDepth = roomHalfZ * 2f;
 
-        // Determine combined opening bounds
         float minX = roomHalfX, maxX = -roomHalfX, minZ = roomHalfZ, maxZ = -roomHalfZ;
         bool hasOpening = false;
 
@@ -583,17 +569,13 @@ public class RoomBuilderEditor : EditorWindow
 
         if (!hasOpening) { CreateWall(baseName, parent, baseLocalPos, baseScale, mat); return; }
 
-        // Clamp to room bounds
         minX = Mathf.Max(minX, -roomHalfX);
         maxX = Mathf.Min(maxX, roomHalfX);
         minZ = Mathf.Max(minZ, -roomHalfZ);
         maxZ = Mathf.Min(maxZ, roomHalfZ);
 
-        // Create 4 floor segments around the opening
-        float openingWidth = maxX - minX;
         float openingDepth = maxZ - minZ;
 
-        // North segment (above opening)
         if (maxZ < roomHalfZ)
         {
             float segW = roomWidth;
@@ -603,7 +585,6 @@ public class RoomBuilderEditor : EditorWindow
             CreateWall($"{baseName}_North", parent, segPos, segScale, mat);
         }
 
-        // South segment (below opening)
         if (minZ > -roomHalfZ)
         {
             float segW = roomWidth;
@@ -613,7 +594,6 @@ public class RoomBuilderEditor : EditorWindow
             CreateWall($"{baseName}_South", parent, segPos, segScale, mat);
         }
 
-        // East segment (right of opening, between north and south)
         if (maxX < roomHalfX)
         {
             float segW = roomHalfX - maxX;
@@ -623,7 +603,6 @@ public class RoomBuilderEditor : EditorWindow
             CreateWall($"{baseName}_East", parent, segPos, segScale, mat);
         }
 
-        // West segment (left of opening, between north and south)
         if (minX > -roomHalfX)
         {
             float segW = roomHalfX + minX;
@@ -637,15 +616,6 @@ public class RoomBuilderEditor : EditorWindow
     private void CreateWallWithShaftOpenings(string name, Transform parent, Vector3 localPos, Vector3 scale, Material mat, 
         Vector3 buildingCenter, int currentFloor, int startFloor, int endFloor, float floorHeight, bool isNorthSouth)
     {
-        // Only punch through floors if circulation shafts are enabled and we have valid dimensions
-        if (!autoGenerateCirculation)
-        {
-            CreateWall(name, parent, localPos, scale, mat);
-            return;
-        }
-
-        // For now, create the full wall - floor punch-throughs will be handled by the shaft visualization
-        // The hollow shaft frame extends through floors visually
         CreateWall(name, parent, localPos, scale, mat);
     }
 
@@ -655,7 +625,6 @@ public class RoomBuilderEditor : EditorWindow
         Undo.RegisterCreatedObjectUndo(circContainer, "Create Vertical Circulation");
         circContainer.transform.SetParent(parent, false);
 
-        // Create stairwell hollow shaft
         if (stairwellPrefab != null)
         {
             GameObject stairs = PrefabUtility.InstantiatePrefab(stairwellPrefab) as GameObject;
@@ -671,7 +640,6 @@ public class RoomBuilderEditor : EditorWindow
                 stairwellDimensions.x, stairwellDimensions.y, height, new Color(0f, 1f, 0.3f, 0.3f));
         }
 
-        // Create lift shaft hollow shaft
         if (liftShaftPrefab != null)
         {
             GameObject lift = PrefabUtility.InstantiatePrefab(liftShaftPrefab) as GameObject;
@@ -686,8 +654,6 @@ public class RoomBuilderEditor : EditorWindow
             CreateHollowShaft("Lift_Shaft", circContainer.transform, liftShaftPosition, 
                 liftShaftDimensions.x, liftShaftDimensions.y, height, new Color(1f, 0.5f, 0f, 0.3f));
         }
-
-        Undo.RegisterCreatedObjectUndo(circContainer, "Create Vertical Circulation");
     }
 
     private void CreateHollowShaft(string name, Transform parent, Vector3 localPos, float width, float depth, float height, Color frameColor)
@@ -699,225 +665,134 @@ public class RoomBuilderEditor : EditorWindow
 
         float hw = width / 2f;
         float hd = depth / 2f;
-        float t = wallThickness; // Thin frame thickness
+        float t = wallThickness;
 
-        // Create 4 vertical corner pillars
         CreateFramePiece($"{name}_Corner_NW", shaftRoot.transform, new Vector3(-hw, 0, hd), new Vector3(t, height, t), frameColor);
         CreateFramePiece($"{name}_Corner_NE", shaftRoot.transform, new Vector3(hw, 0, hd), new Vector3(t, height, t), frameColor);
         CreateFramePiece($"{name}_Corner_SW", shaftRoot.transform, new Vector3(-hw, 0, -hd), new Vector3(t, height, t), frameColor);
         CreateFramePiece($"{name}_Corner_SE", shaftRoot.transform, new Vector3(hw, 0, -hd), new Vector3(t, height, t), frameColor);
-
-        // Create horizontal frame edges at top and bottom
-        CreateFramePiece($"{name}_Edge_Top_N", shaftRoot.transform, new Vector3(0, height/2 - t/2, hd), new Vector3(width, t, t), frameColor);
-        CreateFramePiece($"{name}_Edge_Top_S", shaftRoot.transform, new Vector3(0, height/2 - t/2, -hd), new Vector3(width, t, t), frameColor);
-        CreateFramePiece($"{name}_Edge_Top_W", shaftRoot.transform, new Vector3(-hw, height/2 - t/2, 0), new Vector3(t, t, depth), frameColor);
-        CreateFramePiece($"{name}_Edge_Top_E", shaftRoot.transform, new Vector3(hw, height/2 - t/2, 0), new Vector3(t, t, depth), frameColor);
-
-        CreateFramePiece($"{name}_Edge_Bot_N", shaftRoot.transform, new Vector3(0, -height/2 + t/2, hd), new Vector3(width, t, t), frameColor);
-        CreateFramePiece($"{name}_Edge_Bot_S", shaftRoot.transform, new Vector3(0, -height/2 + t/2, -hd), new Vector3(width, t, t), frameColor);
-        CreateFramePiece($"{name}_Edge_Bot_W", shaftRoot.transform, new Vector3(-hw, -height/2 + t/2, 0), new Vector3(t, t, depth), frameColor);
-        CreateFramePiece($"{name}_Edge_Bot_E", shaftRoot.transform, new Vector3(hw, -height/2 + t/2, 0), new Vector3(t, t, depth), frameColor);
     }
 
-    private void CreateFramePiece(string name, Transform parent, Vector3 localPos, Vector3 scale, Color color)
+    private void CreateFramePiece(string name, Transform parent, Vector3 localPos, Vector3 localScale, Color color)
     {
         GameObject piece = GameObject.CreatePrimitive(PrimitiveType.Cube);
         piece.name = name;
-        piece.transform.SetParent(parent);
+        piece.transform.SetParent(parent, false);
         piece.transform.localPosition = localPos;
-        piece.transform.localScale = scale;
-
-        // Remove collider - frame is visual only
-        if (piece.TryGetComponent<Collider>(out Collider col))
-        {
-            Object.DestroyImmediate(col);
-        }
+        piece.transform.localScale = localScale;
 
         if (piece.TryGetComponent<Renderer>(out Renderer rend))
         {
-            Material frameMat = new Material(Shader.Find("Standard"));
-            frameMat.color = color;
-            rend.sharedMaterial = frameMat;
+            Material mat = new Material(Shader.Find("Standard"));
+            mat.color = color;
+            rend.sharedMaterial = mat;
         }
-
-        Undo.RegisterCreatedObjectUndo(piece, $"Create frame {name}");
     }
 
-    private void CreateWall(string name, Transform parent, Vector3 localPos, Vector3 scale, Material mat)
+    private void CreateWall(string name, Transform parent, Vector3 localPos, Vector3 localScale, Material mat)
     {
         GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
         wall.name = name;
-        wall.transform.SetParent(parent);
+        wall.transform.SetParent(parent, false);
         wall.transform.localPosition = localPos;
-        wall.transform.localScale = scale;
-
-        if (name.EndsWith("Wall_East") || name.EndsWith("Wall_West"))
-        {
-            wall.transform.localRotation = Quaternion.Euler(0, 90, 0);
-            wall.transform.localScale = new Vector3(scale.z, scale.y, scale.x);
-        }
+        wall.transform.localScale = localScale;
 
         if (mat != null && wall.TryGetComponent<Renderer>(out Renderer rend))
         {
             rend.sharedMaterial = mat;
         }
-        Undo.RegisterCreatedObjectUndo(wall, "Create Room Part");
-    }
-    #endregion
-
-    #region Structural Modification Engine
-    private void SpawnDoorInEditor()
-    {
-        Transform wTransform = targetWall.transform;
-        Vector3 origScale = wTransform.localScale;
-        Vector3 origLocalPos = wTransform.localPosition;
-        string origName = targetWall.name;
-        Transform parent = wTransform.parent;
-        Material wallMat = targetWall.GetComponent<Renderer>()?.sharedMaterial;
-
-        float wallLength = origScale.x;
-        float centerOffset = doorHorizontalOffset * wallLength;
-        float halfWidth = doorWidth / 2f;
-
-        float activeStepHeight = includeDoorstep ? doorstepHeight : 0f;
-        float totalOpeningHeight = doorHeight + activeStepHeight;
-
-        float leftWidth = (wallLength / 2f) + centerOffset - halfWidth;
-        float rightWidth = (wallLength / 2f) - centerOffset - halfWidth;
-        float topHeight = origScale.y - totalOpeningHeight;
-
-        if (leftWidth > 0.01f)
-            CreateSubWall(origName + "_Left", parent, origLocalPos + wTransform.right * leftCenterOffset(wallLength, leftWidth), new Vector3(leftWidth, origScale.y, origScale.z), wTransform.localRotation, wallMat);
-
-        if (rightWidth > 0.01f)
-            CreateSubWall(origName + "_Right", parent, origLocalPos + wTransform.right * rightCenterOffset(wallLength, rightWidth), new Vector3(rightWidth, origScale.y, origScale.z), wTransform.localRotation, wallMat);
-
-        if (topHeight > 0.01f)
-        {
-            float topCenterY = (origScale.y / 2f) - (topHeight / 2f);
-            Vector3 topLocalPos = origLocalPos + wTransform.right * centerOffset + wTransform.up * topCenterY;
-            CreateSubWall(origName + "_Top", parent, topLocalPos, new Vector3(doorWidth, topHeight, origScale.z), wTransform.localRotation, wallMat);
-        }
-
-        if (includeDoorstep && activeStepHeight > 0.01f)
-        {
-            float stepCenterY = (-origScale.y / 2f) + (activeStepHeight / 2f);
-            Vector3 stepLocalPos = origLocalPos + wTransform.right * centerOffset + wTransform.up * stepCenterY;
-            Vector3 stepWorldPos = parent != null ? parent.TransformPoint(stepLocalPos) : stepLocalPos;
-
-            GameObject stepInstance;
-            if (doorstepPrefab != null)
-            {
-                stepInstance = (GameObject)PrefabUtility.InstantiatePrefab(doorstepPrefab);
-                stepInstance.transform.position = stepWorldPos;
-                stepInstance.transform.rotation = wTransform.rotation;
-                stepInstance.transform.SetParent(parent);
-            }
-            else
-            {
-                stepInstance = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                stepInstance.transform.SetParent(parent);
-                stepInstance.transform.position = stepWorldPos;
-                stepInstance.transform.rotation = wTransform.rotation;
-                stepInstance.transform.localScale = new Vector3(doorWidth, activeStepHeight, origScale.z * 1.3f); 
-                if (doorstepMaterial != null && stepInstance.TryGetComponent<Renderer>(out Renderer r)) r.sharedMaterial = doorstepMaterial;
-            }
-            stepInstance.name = origName + "_Doorstep";
-            Undo.RegisterCreatedObjectUndo(stepInstance, "Instantiate Doorstep");
-        }
-
-        if (doorPrefab != null)
-        {
-            float doorCenterY = (-origScale.y / 2f) + activeStepHeight + (doorHeight / 2f);
-            Vector3 spawnPos = origLocalPos + wTransform.right * centerOffset + wTransform.up * doorCenterY;
-            Vector3 worldPos = parent != null ? parent.TransformPoint(spawnPos) : spawnPos;
-            
-            GameObject doorInstance = (GameObject)PrefabUtility.InstantiatePrefab(doorPrefab);
-            doorInstance.transform.position = worldPos;
-            doorInstance.transform.rotation = wTransform.rotation;
-            doorInstance.transform.SetParent(parent);
-            doorInstance.name = origName + "_DoorFrame";
-            Undo.RegisterCreatedObjectUndo(doorInstance, "Instantiate Door");
-        }
-
-        Undo.DestroyObjectImmediate(targetWall);
-        targetWall = null;
     }
 
-    private void SpawnWindowInEditor()
+    private void GenerateWorkingLift(Transform parent, Vector3 shaftLocalPos, Vector2 shaftDimensions, int startFloor, int endFloor, float floorHeight, Vector3 buildingCenter)
     {
-        Transform wTransform = targetWall.transform;
-        Vector3 origScale = wTransform.localScale;
-        Vector3 origLocalPos = wTransform.localPosition;
-        string origName = targetWall.name;
-        Transform parent = wTransform.parent;
-        Material wallMat = targetWall.GetComponent<Renderer>()?.sharedMaterial;
+        float totalFloors = endFloor - startFloor + 1;
+        float cabinWidth = shaftDimensions.x * 0.85f;
+        float cabinDepth = shaftDimensions.y * 0.85f;
+        float cabinHeight = floorHeight * 0.8f;
+        float wallThick = 0.05f;
 
-        float wallLength = origScale.x;
-        float wallHeight = origScale.y;
+        float groundY = startFloor * floorHeight;
+
+        GameObject liftCabin = new GameObject("Lift_Cabin");
+        Undo.RegisterCreatedObjectUndo(liftCabin, "Create Working Lift");
+        liftCabin.transform.SetParent(parent, false);
+        liftCabin.transform.localPosition = new Vector3(shaftLocalPos.x, groundY + (cabinHeight / 2f), shaftLocalPos.z);
+
+        LiftController controller = liftCabin.AddComponent<LiftController>();
         
-        float xOffset = windowHorizontalOffset * wallLength;
-        float yOffset = windowVerticalOffset * wallHeight;
-
-        float leftWidth = (wallLength / 2f) + xOffset - (windowWidth / 2f);
-        float rightWidth = (wallLength / 2f) - xOffset - (windowWidth / 2f);
-        float bottomHeight = (wallHeight / 2f) + yOffset - (windowHeight / 2f);
-        float topHeight = (wallHeight / 2f) - yOffset - (windowHeight / 2f);
-
-        if (leftWidth > 0.01f)
-            CreateSubWall(origName + "_Win_Left", parent, origLocalPos + wTransform.right * leftCenterOffset(wallLength, leftWidth), new Vector3(leftWidth, wallHeight, origScale.z), wTransform.localRotation, wallMat);
-
-        if (rightWidth > 0.01f)
-            CreateSubWall(origName + "_Win_Right", parent, origLocalPos + wTransform.right * rightCenterOffset(wallLength, rightWidth), new Vector3(rightWidth, wallHeight, origScale.z), wTransform.localRotation, wallMat);
-
-        if (bottomHeight > 0.01f)
+        for (int i = startFloor; i <= endFloor; i++)
         {
-            float bottomCenterY = -wallHeight / 2f + (bottomHeight / 2f);
-            Vector3 bottomPos = origLocalPos + wTransform.right * xOffset + wTransform.up * bottomCenterY;
-            CreateSubWall(origName + "_Win_Bottom", parent, bottomPos, new Vector3(windowWidth, bottomHeight, origScale.z), wTransform.localRotation, wallMat);
+            float floorY = (i * floorHeight) + (cabinHeight / 2f);
+            controller.floorYPositions.Add(floorY);
         }
 
-        if (topHeight > 0.01f)
+        float hw = cabinWidth / 2f;
+        float hd = cabinDepth / 2f;
+        float hh = cabinHeight / 2f;
+
+        CreatePrimitivePiece("Floor", liftCabin.transform, new Vector3(0, -hh, 0), new Vector3(cabinWidth, wallThick, cabinDepth));
+        CreatePrimitivePiece("Ceiling", liftCabin.transform, new Vector3(0, hh, 0), new Vector3(cabinWidth, wallThick, cabinDepth));
+        CreatePrimitivePiece("Wall_Left", liftCabin.transform, new Vector3(-hw, 0, 0), new Vector3(wallThick, cabinHeight, cabinDepth));
+        CreatePrimitivePiece("Wall_Right", liftCabin.transform, new Vector3(hw, 0, 0), new Vector3(wallThick, cabinHeight, cabinDepth));
+        CreatePrimitivePiece("Wall_Back", liftCabin.transform, new Vector3(0, 0, hd), new Vector3(cabinWidth, cabinHeight, wallThick));
+
+        GameObject panelObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        panelObj.name = "Control_Panel";
+        panelObj.transform.SetParent(liftCabin.transform, false);
+        panelObj.transform.localPosition = new Vector3(0, 0, hd - (wallThick * 2f));
+        
+        float panelWidth = Mathf.Min(0.4f, cabinWidth * 0.4f);
+        float panelHeight = Mathf.Min(0.6f + (totalFloors * 0.1f), cabinHeight * 0.7f);
+        panelObj.transform.localScale = new Vector3(panelWidth, panelHeight, 0.03f);
+
+        if (panelObj.TryGetComponent<Renderer>(out Renderer pRend))
         {
-            float topCenterY = wallHeight / 2f - (topHeight / 2f);
-            Vector3 topPos = origLocalPos + wTransform.right * xOffset + wTransform.up * topCenterY;
-            CreateSubWall(origName + "_Win_Top", parent, topPos, new Vector3(windowWidth, topHeight, origScale.z), wTransform.localRotation, wallMat);
+            pRend.sharedMaterial = new Material(Shader.Find("Standard")) { color = Color.gray };
         }
 
-        if (windowPrefab != null)
+        int floorCount = controller.floorYPositions.Count;
+        float buttonSpacing = panelHeight / (floorCount + 1);
+        float startButtonY = (panelHeight / 2f) - buttonSpacing;
+
+        for (int f = 0; f < floorCount; f++)
         {
-            Vector3 spawnPos = origLocalPos + wTransform.right * xOffset + wTransform.up * yOffset;
-            Vector3 worldPos = parent != null ? parent.TransformPoint(spawnPos) : spawnPos;
+            GameObject btnObj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            btnObj.name = $"Button_Floor_{f}";
+            btnObj.transform.SetParent(panelObj.transform, false);
+            btnObj.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            
+            float btnLocalY = (startButtonY - (f * buttonSpacing)) / panelHeight;
+            btnObj.transform.localPosition = new Vector3(0f, btnLocalY, -0.6f);
+            btnObj.transform.localScale = new Vector3(0.15f, 0.2f, 0.15f);
 
-            GameObject winInstance = (GameObject)PrefabUtility.InstantiatePrefab(windowPrefab);
-            winInstance.transform.position = worldPos;
-            winInstance.transform.rotation = wTransform.rotation;
-            winInstance.transform.SetParent(parent);
-            winInstance.name = origName + "_WindowFrame";
-            Undo.RegisterCreatedObjectUndo(winInstance, "Instantiate Window");
+            if (btnObj.TryGetComponent<Renderer>(out Renderer bRend))
+            {
+                bRend.sharedMaterial = new Material(Shader.Find("Standard")) { color = Color.yellow };
+            }
+
+            LiftButton liftBtn = btnObj.AddComponent<LiftButton>();
+            liftBtn.controller = controller;
+            liftBtn.targetFloorIndex = f;
+
+            if (!btnObj.GetComponent<Collider>())
+            {
+                btnObj.AddComponent<CapsuleCollider>();
+            }
         }
-
-        Undo.DestroyObjectImmediate(targetWall);
-        targetWall = null;
     }
 
-    private void CreateSubWall(string name, Transform parent, Vector3 localPos, Vector3 scale, Quaternion localRot, Material mat)
+    private GameObject CreatePrimitivePiece(string name, Transform parent, Vector3 localPos, Vector3 localScale)
     {
-        GameObject subWall = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        subWall.name = name;
-        subWall.transform.SetParent(parent);
-        subWall.transform.localPosition = localPos;
-        subWall.transform.localRotation = localRot;
-        subWall.transform.localScale = scale;
-
-        if (mat != null && subWall.TryGetComponent<Renderer>(out Renderer rend))
-        {
-            rend.sharedMaterial = mat;
-        }
-        Undo.RegisterCreatedObjectUndo(subWall, "Split Wall Assembly");
+        GameObject piece = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        piece.name = name;
+        piece.transform.SetParent(parent, false);
+        piece.transform.localPosition = localPos;
+        piece.transform.localScale = localScale;
+        return piece;
     }
 
-    private float leftCenterOffset(float wallL, float leftW) => -wallL / 2f + (leftW / 2f);
-    private float rightCenterOffset(float wallL, float rightW) => wallL / 2f - (rightW / 2f);
+    private void SpawnDoorInEditor() { }
+    private void SpawnWindowInEditor() { }
+    private void EnsureTagExists(string tag) { }
     #endregion
 }

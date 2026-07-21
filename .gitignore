@@ -1,0 +1,62 @@
+# =========================================================================
+# Unity
+# =========================================================================
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# Asset store packages (only ignore if downloaded locally)
+/[Aa]ssets/AssetStoreTools*
+
+# Ignore generated visual studio / rider project files
+# (Unity regenerates these automatically)
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.opendb
+*.idb
+
+# Unity addressables / build reports
+/[Aa]ssets/StreamingAssets/aa/*
+/[Aa]ssets/AddressableAssetsData/*/*.bin*
+
+# =========================================================================
+# IDEs & Editors (VS Code, Windsurf, Copilot, Visual Studio)
+# =========================================================================
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.vs/
+.idea/
+*.workspace
+
+# Codeium / Windsurf local state
+.codeium/
+.cascade/
+
+# =========================================================================
+# OS / System Junk
+# =========================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
