@@ -7,24 +7,27 @@ public class PlayerController : MonoBehaviour
 {
     public float moveSpeed = 5f;
     public float crouchSpeed = 2.5f;
-    public float jumpForce = 5f;
+    public float jumpForce = 3.5f;
     public float jetpackThrust = 15f;
     public float maxFallSpeed = 20f;
     public float standHeight = 2f;
     public float crouchHeight = 1f;
+    public float interactionDistance = 3f;
+    public bool showReticle = true;
     
     private Rigidbody rb;
     private CapsuleCollider capsule;
     private bool isGrounded;
-    private bool isJumping;
     private bool isCrouching;
 
     private bool isNoclip = false;
+    private Camera playerCamera;
 
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
         capsule = GetComponent<CapsuleCollider>();
+        playerCamera = GetComponentInChildren<Camera>();
     }
 
     private void Update()
@@ -33,13 +36,44 @@ public class PlayerController : MonoBehaviour
         HandleCrouch();
         HandleInput();
         HandleNoclip();
+        HandleInteraction();
+    }
+
+    private void HandleInteraction()
+    {
+        if (!Input.GetKeyDown(KeyCode.E) || playerCamera == null)
+        {
+            return;
+        }
+
+        Ray interactionRay = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        if (Physics.Raycast(interactionRay, out RaycastHit hit, interactionDistance))
+        {
+            LiftButton liftButton = hit.collider.GetComponent<LiftButton>() ?? hit.collider.GetComponentInParent<LiftButton>();
+            if (liftButton != null)
+            {
+                liftButton.PressButton();
+            }
+        }
+    }
+
+    private void OnGUI()
+    {
+        if (!showReticle || playerCamera == null)
+        {
+            return;
+        }
+
+        const float reticleSize = 4f;
+        float reticleX = (Screen.width - reticleSize) * 0.5f;
+        float reticleY = (Screen.height - reticleSize) * 0.5f;
+        GUI.Box(new Rect(reticleX, reticleY, reticleSize, reticleSize), string.Empty);
     }
 
     private void CheckGrounded()
     {
         float checkDistance = (capsule != null ? capsule.height / 2f : 1f) + 0.1f;
         isGrounded = Physics.Raycast(transform.position, Vector3.down, checkDistance);
-        if (isGrounded) isJumping = false;
     }
 
     private void HandleNoclip()
@@ -50,12 +84,21 @@ public class PlayerController : MonoBehaviour
             rb.detectCollisions = !isNoclip;
             rb.useGravity = !isNoclip;
             rb.velocity = Vector3.zero;
+            if (isNoclip)
+            {
+                isCrouching = false;
+            }
             if (capsule != null) capsule.enabled = !isNoclip;
         }
     }
 
     private void HandleCrouch()
     {
+        if (isNoclip)
+        {
+            return;
+        }
+
         if (Input.GetKeyDown(KeyCode.LeftControl))
         {
             isCrouching = true;
@@ -70,7 +113,7 @@ public class PlayerController : MonoBehaviour
 
     private void HandleInput()
     {
-        float speed = isCrouching ? crouchSpeed : moveSpeed;
+        float speed = isNoclip ? moveSpeed : (isCrouching ? crouchSpeed : moveSpeed);
 
         // Basic movement input
         float horizontal = Input.GetAxis("Horizontal");
@@ -80,17 +123,16 @@ public class PlayerController : MonoBehaviour
         if (isNoclip)
         {
             Transform cam = transform.GetComponentInChildren<Camera>()?.transform;
-            Vector3 dir = cam != null
+            Vector3 horizontalDir = cam != null
                 ? cam.TransformDirection(new Vector3(horizontal, 0, vertical))
                 : transform.TransformDirection(new Vector3(horizontal, 0, vertical));
 
-            // Space = fly up, Left Ctrl = fly down
-            float verticalInput = 0f;
-            if (Input.GetKey(KeyCode.Space)) verticalInput = 1f;
-            else if (Input.GetKey(KeyCode.LeftControl)) verticalInput = -1f;
+            float verticalVelocity = 0f;
+            if (Input.GetKey(KeyCode.Space)) verticalVelocity = jetpackThrust;
+            else if (Input.GetKey(KeyCode.LeftControl)) verticalVelocity = -jetpackThrust;
 
-            dir += Vector3.up * verticalInput;
-            rb.velocity = dir * speed * 2f;
+            Vector3 horizontalVelocity = horizontalDir * speed * 2f;
+            rb.velocity = new Vector3(horizontalVelocity.x, verticalVelocity, horizontalVelocity.z);
             return;
         }
         
@@ -102,25 +144,14 @@ public class PlayerController : MonoBehaviour
         {
             rb.velocity = new Vector3(rb.velocity.x, 0, rb.velocity.z);
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-            isJumping = true;
         }
         
-        // Hold space - jetpack thrust (works anytime you're airborne)
-        if (Input.GetKey(KeyCode.Space) && !isGrounded)
+        // Clamp downward speed while falling.
+        if (rb.velocity.y < -maxFallSpeed)
         {
-            rb.AddForce(Vector3.up * jetpackThrust, ForceMode.Force);
-            
-            if (rb.velocity.y < -maxFallSpeed)
-            {
-                rb.velocity = new Vector3(rb.velocity.x, -maxFallSpeed, rb.velocity.z);
-            }
+            rb.velocity = new Vector3(rb.velocity.x, -maxFallSpeed, rb.velocity.z);
         }
         
-        // Jump button released - stop jetpack
-        if (Input.GetKeyUp(KeyCode.Space))
-        {
-            isJumping = false;
-        }
     }
 
 

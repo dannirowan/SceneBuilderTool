@@ -16,14 +16,14 @@ public class LiftController : MonoBehaviour
 
     private void Start()
     {
-        // Ensure lift starts at the ground floor (index 0)
-        if (floorYPositions.Count > 0)
-        {
-            Vector3 pos = transform.position;
-            pos.y = floorYPositions[0];
-            transform.position = pos;
-            targetY = pos.y;
-        }
+    // Use current scene Y position as the starting point
+    targetY = transform.position.y;
+
+    // If floorYPositions has values, assign current Y to floor 0 if empty
+    if (floorYPositions.Count > 0)
+    {
+        currentFloorIndex = 0;
+    }
     }
 
     private void Update()
@@ -48,29 +48,5 @@ public class LiftController : MonoBehaviour
         currentFloorIndex = floorIndex;
         targetY = floorYPositions[floorIndex];
         isMoving = true;
-    }
-}
-
-/// <summary>
-/// Clickable or Raycastable button attached to the panel inside the lift.
-/// </summary>
-public class LiftButton : MonoBehaviour
-{
-    public LiftController controller;
-    public int targetFloorIndex;
-
-    // Direct click support (standard Unity collider detection)
-    private void OnMouseDown()
-    {
-        PressButton();
-    }
-
-    // Call this if using standard FPS Raycasting or Interaction toolkits
-    public void PressButton()
-    {
-        if (controller != null)
-        {
-            controller.MoveToFloor(targetFloorIndex);
-        }
     }
 }

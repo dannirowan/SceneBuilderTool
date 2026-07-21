@@ -463,7 +463,8 @@ public class RoomBuilderEditor : EditorWindow
         float hz = size.z / 2f;
         float t = wallThickness;
 
-        CreateFloorWithShaftOpenings(roomRoot, $"{floorLabel}_Floor", new Vector3(0, -hy + (t / 2f), 0), new Vector3(size.x, t, size.z), floorMaterial, hx, hz);
+        bool isLowestFloor = (currentFloor == startFloor);
+        CreateFloorWithShaftOpenings(roomRoot, $"{floorLabel}_Floor", new Vector3(0, -hy + (t / 2f), 0), new Vector3(size.x, t, size.z), floorMaterial, hx, hz, isLowestFloor);
         
         bool isTopFloor = (currentFloor == endFloor);
         if (isTopFloor)
@@ -492,7 +493,7 @@ public class RoomBuilderEditor : EditorWindow
             buildingCenter, currentFloor, startFloor, endFloor, size.y, false);
     }
 
-    private void CreateFloorWithShaftOpenings(Transform parent, string name, Vector3 localPos, Vector3 floorScale, Material mat, float roomHalfX, float roomHalfZ)
+    private void CreateFloorWithShaftOpenings(Transform parent, string name, Vector3 localPos, Vector3 floorScale, Material mat, float roomHalfX, float roomHalfZ, bool ignoreLiftOpening = false)
     {
         if (!autoGenerateCirculation)
         {
@@ -509,7 +510,7 @@ public class RoomBuilderEditor : EditorWindow
         float liftHalfD = liftShaftDimensions.y / 2f;
 
         bool stairIntersects = IsShaftIntersectingFloor(stairwellXZ, stairHalfW, stairHalfD, roomHalfX, roomHalfZ);
-        bool liftIntersects = IsShaftIntersectingFloor(liftShaftXZ, liftHalfW, liftHalfD, roomHalfX, roomHalfZ);
+        bool liftIntersects = !ignoreLiftOpening && IsShaftIntersectingFloor(liftShaftXZ, liftHalfW, liftHalfD, roomHalfX, roomHalfZ);
 
         if (!stairIntersects && !liftIntersects)
         {
